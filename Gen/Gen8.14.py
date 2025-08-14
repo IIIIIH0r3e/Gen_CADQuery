@@ -219,7 +219,7 @@ path_wire_{vi_key} = build_path(points_{vi_key}, custom_plane_{vi_key})
 """
 
         script += f"""#执行扫掠
-swept_{vi_key} = base_{vi_key}.sweep(path_wire_{vi_key}, isFrenet = False, makeSolid = True)
+swept_{vi_key} = base_{vi_key}.sweep(path_wire_{vi_key}, isFrenet = False, makeSolid = True, normal = cq.Vector(*z_dir_{vi_key}))
 """
 
         if is_solid:
@@ -259,8 +259,8 @@ if final_model is None:
         raise RuntimeError("未生成任何几何体")
 
 # 导出结果
-cq.exporters.export(final_model, 'output_newformat.stl', exportType='STL')
-print("模型已导出为output_newformat.stl")
+cq.exporters.export(final_model, 'output_newformat_with_2_path.stl', exportType='STL')
+print("模型已导出为output_newformat_with_2_path.stl")
 """
 
 
@@ -289,14 +289,16 @@ sample_data = {
             "X7": [-442.03, -107.97], "7E0": -1.37
         },        
         "Path": {                               #扫掠路径
-            "P0": [0, 0, 0], "0E1": 0,"0N1": [0,0,0],
-            "P1": [0, 0, 100]
+            "P0": [0, 0, 0], "0E1": 0, "0N1": [0,0,0],
+            "P1": [0, 0, 200], "1E2": 0, "1N2": [0,0,0],
+            "P2": [0, 200, 400], "2E3": 0, "2N3": [0,0,0],
+            "P3": [200,400,600]
         }        
     },
     
     "V1":{
         "R": [0, 0, 0, 1],
-        "T": [0, 0, 200],
+        "T": [0, 0, 0],
         "is_solid": False,
         "Profile": {
             "X0":[20, 20], "0E1":np.pi,
@@ -304,13 +306,13 @@ sample_data = {
         },
         "Path": {
             "P0": [0, 0, 0], "0E1": 0,"0N1": [0,0,0],
-            "P1": [0, 0, -200]
+            "P1": [0, 0, 2000]
         }
     },
     
     "V2":{
         "R": [0, 0, 0, 1],
-        "T": [0, 0, 200],
+        "T": [0, 0, 0],
         "is_solid": False,
         "Profile": {
             "X0":[0, 0], "0E1":np.pi,
@@ -318,26 +320,26 @@ sample_data = {
         },
         "Path": {
             "P0": [0, 0, 0], "0E1": 0,"0N1": [0,0,0],
-            "P1": [0, 0, -100]
+            "P1": [0, 0, 100]
         }
     },
     
     "V3":{
         "R": [0, 0.707, 0, 0.707],
-        "T": [-50, 100, 170],
+        "T": [50, 100, 0],
         "is_solid": False,
         "Profile": {
-            "X0":[30, 30], "0E1":np.pi,
-            "X1":[-30, -30], "1E0":np.pi
+            "X0":[50, 50], "0E1":np.pi,
+            "X1":[-50, -50], "1E0":np.pi
         },
         "Path": {
-            "P0": [0, 0, -100], "0E1": 0,"0N1": [0,0,0],
-            "P1": [0, 0, 100]
+            "P0": [0, 0, -1000], "0E1": 0,"0N1": [0,0,0],
+            "P1": [0, 0, 1000]
         }        
     }
 
 }
 
 
-output_file = "../Gen_CADquery/gen_new_dataformat.py"
+output_file = "../Gen_CADquery/gen_new_dataformat_with_2_path.py"
 generate_cadquery_script(sample_data, output_file)
