@@ -1,13 +1,13 @@
-Persenal repo
+##Persenal repo
 
-env:
+###env:
 
     python3.8.20
     cadquery
     scipy
     
 
-dir discribe:
+###dir discribe:
 
     CADQuery:                forget,maybe test
     Gen:                     generate CADQuery from raw_data
@@ -16,7 +16,7 @@ dir discribe:
     
 
 
-sample_data_format:
+###sample_data_format:
 
 sample_data = {
     
