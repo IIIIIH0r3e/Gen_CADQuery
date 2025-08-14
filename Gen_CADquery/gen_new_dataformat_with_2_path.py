@@ -38,13 +38,14 @@ base_V0.close()
 points_V0 = [
         (0, 0, 0),
         (0, 0, 200),
-        (0, 200, 400)
+        (0, 200, 400),
+        (200, 400, 600)
 ]
 
 #构建扫掠路径
 path_wire_V0 = build_path(points_V0, custom_plane_V0)
 #执行扫掠
-swept_V0 = base_V0.sweep(path_wire_V0, isFrenet = False, makeSolid = True)
+swept_V0 = base_V0.sweep(path_wire_V0, isFrenet = False, makeSolid = True, normal = cq.Vector(*z_dir_V0))
 solids.append(swept_V0)
 
 
@@ -55,7 +56,7 @@ y_dir_V1 = [0.0, 1.0, 0.0]
 z_dir_V1 = [0.0, 0.0, 1.0]
 
 custom_plane_V1 = cq.Plane(
-    origin = [0, 0, 200],
+    origin = [0, 0, 0],
     xDir = cq.Vector(*x_dir_V1),
     normal = cq.Vector(*z_dir_V1)
 )
@@ -69,13 +70,13 @@ base_V1.close()
 # 扫掠路径
 points_V1 = [
         (0, 0, 0),
-        (0, 0, -200)
+        (0, 0, 2000)
 ]
 
 #构建扫掠路径
 path_wire_V1 = build_path(points_V1, custom_plane_V1)
 #执行扫掠
-swept_V1 = base_V1.sweep(path_wire_V1, isFrenet = False, makeSolid = True)
+swept_V1 = base_V1.sweep(path_wire_V1, isFrenet = False, makeSolid = True, normal = cq.Vector(*z_dir_V1))
 cuts.append(swept_V1)
 
 
@@ -86,7 +87,7 @@ y_dir_V2 = [0.0, 1.0, 0.0]
 z_dir_V2 = [0.0, 0.0, 1.0]
 
 custom_plane_V2 = cq.Plane(
-    origin = [0, 0, 200],
+    origin = [0, 0, 0],
     xDir = cq.Vector(*x_dir_V2),
     normal = cq.Vector(*z_dir_V2)
 )
@@ -100,13 +101,13 @@ base_V2.close()
 # 扫掠路径
 points_V2 = [
         (0, 0, 0),
-        (0, 0, -100)
+        (0, 0, 100)
 ]
 
 #构建扫掠路径
 path_wire_V2 = build_path(points_V2, custom_plane_V2)
 #执行扫掠
-swept_V2 = base_V2.sweep(path_wire_V2, isFrenet = False, makeSolid = True)
+swept_V2 = base_V2.sweep(path_wire_V2, isFrenet = False, makeSolid = True, normal = cq.Vector(*z_dir_V2))
 cuts.append(swept_V2)
 
 
@@ -117,27 +118,27 @@ y_dir_V3 = [0.0, 1.0000000000000002, 0.0]
 z_dir_V3 = [1.0000000000000002, 0.0, 0.0]
 
 custom_plane_V3 = cq.Plane(
-    origin = [-50, 100, 170],
+    origin = [50, 100, 0],
     xDir = cq.Vector(*x_dir_V3),
     normal = cq.Vector(*z_dir_V3)
 )
 
 base_V3 = cq.Workplane(custom_plane_V3)
-base_V3 = base_V3.moveTo(30, 30)
-base_V3 = base_V3.threePointArc((-29.999999999999996, 30.000000000000004), (-30, -30))
-base_V3 = base_V3.threePointArc((29.999999999999996, -30.000000000000004), (30, 30))
+base_V3 = base_V3.moveTo(50, 50)
+base_V3 = base_V3.threePointArc((-50.0, 50.0), (-50, -50))
+base_V3 = base_V3.threePointArc((50.0, -50.0), (50, 50))
 base_V3.close()
 
 # 扫掠路径
 points_V3 = [
-        (0, 0, -100),
-        (0, 0, 100)
+        (0, 0, -1000),
+        (0, 0, 1000)
 ]
 
 #构建扫掠路径
 path_wire_V3 = build_path(points_V3, custom_plane_V3)
 #执行扫掠
-swept_V3 = base_V3.sweep(path_wire_V3, isFrenet = False, makeSolid = True)
+swept_V3 = base_V3.sweep(path_wire_V3, isFrenet = False, makeSolid = True, normal = cq.Vector(*z_dir_V3))
 cuts.append(swept_V3)
 
 
@@ -170,5 +171,5 @@ if final_model is None:
         raise RuntimeError("未生成任何几何体")
 
 # 导出结果
-cq.exporters.export(final_model, 'output_newformat.stl', exportType='STL')
-print("模型已导出为output_newformat.stl")
+cq.exporters.export(final_model, 'output_newformat_with_2_path.stl', exportType='STL')
+print("模型已导出为output_newformat_with_2_path.stl")
