@@ -12,7 +12,7 @@ dir discribe:
     CADQuery:                forget,maybe test
     Gen:                     generate CADQuery from raw_data
     Gen_CADquery:            CADQuery from Gen
-    OUTPUT_for_check:        run CADQuery produce .stl
+    OUTPUT_for_check:        run CADQuery produce .stl/.step
     
 
 
