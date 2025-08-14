@@ -1,4 +1,23 @@
+Persenal repo
+
+env:
+
+    python3.8.20
+    cadquery
+    scipy
+    
+
+dir discribe:
+
+    CADQuery:                forget,maybe test
+    Gen:                     generate CADQuery from raw_data
+    Gen_CADquery:            CADQuery from Gen
+    OUTPUT_for_check:        run CADQuery produce .stl
+    
+
+
 sample_data_format:
+
 sample_data = {
     
     "V0":{
