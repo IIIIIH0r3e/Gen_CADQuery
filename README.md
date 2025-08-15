@@ -1,13 +1,13 @@
-##Persenal repo
+## Persenal repo
 
-###env:
+### env:
 
     python3.8.20
     cadquery
     scipy
     
 
-###dir discribe:
+### dir discribe:
 
     CADQuery:                forget,maybe test
     Gen:                     generate CADQuery from raw_data
@@ -16,10 +16,9 @@
     
 
 
-###sample_data_format:
+### sample_data_format:
 
 sample_data = {
-    
     "V0":{
         "R": [0, 0, 0, 1],                      #旋转四元数
         "T": [0, 0, 0],                         #三维平移参数   
@@ -81,5 +80,4 @@ sample_data = {
             "P1": [0, 0, 100]
         }        
     }
-
 }
