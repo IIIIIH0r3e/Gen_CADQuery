@@ -19,6 +19,7 @@
 ### sample_data_format:
 
 sample_data = {
+
     "V0":{
         "R": [0, 0, 0, 1],                      #旋转四元数
         "T": [0, 0, 0],                         #三维平移参数   
