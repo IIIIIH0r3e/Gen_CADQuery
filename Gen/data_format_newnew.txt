@@ -1,0 +1,26 @@
+# 修改后的边定义示例
+Profile:
+{
+    "X0": [0, 0],  # 顶点坐标不变
+    "0E1": {       # 边定义改为字典
+        "type": "line",          # 直线
+    },
+
+    "X1": [100, 0], 
+    "1E2": {
+        "type": "circular_arc",  # 圆弧
+        "angle": 1.57,           # 弧度制角度（正=逆时针）
+    },
+
+    "X2":[*,*],
+    "2E3": {
+        "type": "elliptical_arc", # 椭圆弧
+        "major_radius": 100,      # 长轴
+        "minor_radius": 50,       # 短轴
+        "origin": [x, y],         # 椭圆圆心坐标
+        "start_angle": 0,         # 起始角度（弧度）
+        "end_angle": 1.57,        # 终止角度
+        "dx": [x,y]               # 长轴方向向量
+        "clocksign": 1/-1         # 1为逆  -1为顺
+    }
+}
