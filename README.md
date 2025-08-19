@@ -40,7 +40,7 @@ sample_data = {
                 },
 
             "X2": [-200, 250], 
-            "2E3": {
+            "2E3": {                            # 数值不准确，仅作举例子
                 "type": "elliptical_arc",       # 椭圆弧
                 "major_radius": 100,            # 长轴
                 "minor_radius": 50,             # 短轴
