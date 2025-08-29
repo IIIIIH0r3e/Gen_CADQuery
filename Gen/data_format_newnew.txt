@@ -10,6 +10,7 @@ Profile:
     "1E2": {
         "type": "circular_arc",  # 圆弧
         "angle": 1.57,           # 弧度制角度（正=逆时针）
+        "origin": [x, y],         # 圆心坐标
     },
 
     "X2":[*,*],

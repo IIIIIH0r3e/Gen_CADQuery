@@ -2,6 +2,8 @@ import cadquery as cq
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 import re
+import json
+import os
 
 
 """通用2D/3D圆弧中点计算（自动处理共面性）"""
@@ -157,8 +159,34 @@ def parse_polygon(data, prefix="X"):        #data：profile 或 Path
         return vertices, edges, normals
     
 
+def filter_path_points(points, tol = 1e-6):
+    """按顺序过滤连续近重合点；返回过滤后的点列表"""
+    filtered = []
+    for p in points:
+        p = (float(p[0]), float(p[1]), float(p[2]))
+        if not filtered:
+            filtered.append(p)
+        else:
+            last = filtered[-1]
+            if np.linalg.norm(np.array(p) - np.array(last)) >= tol:
+                filtered.append(p)
+    return filtered
+
+def path_total_length(points):
+    """计算折线总长度"""
+    if len(points) < 2:
+        return 0.0
+    pts = np.array(points, dtype=float)
+    segs = pts[1:] - pts[:-1]
+    return float(np.linalg.norm(segs, axis=1).sum())
+
+def path_is_valid(points, tol=1e-6):
+    """过滤后至少两点且总长度≥tol"""
+    return len(points) >= 2 and path_total_length(points) >= tol
+
+
 """生成完整CadQuery脚本"""
-def generate_cadquery_script(vi_dict, output_file):
+def generate_cadquery_script(vi_dict, output_file, shangpin_ID):
     
     #脚本头部
     script = f"""# Auto-generated CadQuery script
@@ -175,6 +203,18 @@ cuts = []
 """    
     
     for vi_key,vi_data in vi_dict.items():
+        
+        # ===== 先准备 Path 点，并做过滤与合法性检查 =====
+        path_vertices, path_edges,path_normals = parse_polygon(vi_data["Path"], "P")             #返回路径点和路径边及法向量
+        filtered_path = filter_path_points(path_vertices, tol=1e-6)
+        total_len = path_total_length(filtered_path)
+        if not path_is_valid(filtered_path, tol=1e-6):
+            script += f"# 跳过 {vi_key}：Path 无效（过滤后点数={len(filtered_path)}，总长={total_len:.6g} < 1e-6）\n"
+            continue
+        
+        # ===== 路径有效，再开始缓冲该 VI 的脚本 =====
+        vi_chunk = ""
+        
         #解析旋转和平移参数
         rotation_quat = vi_data.get("R" , [0, 0, 0, 1])
         translation = vi_data.get("T" , [0,0,0])
@@ -187,7 +227,7 @@ cuts = []
         z_dir = rot.apply([0, 0, 1])
 
         #为当前Vi创建工作平面
-        script += f"""
+        vi_chunk += f"""
 #===== 处理 {vi_key} =====
 #创建平面
 x_dir_{vi_key} = {x_dir.tolist()}
@@ -205,48 +245,58 @@ base_{vi_key} = cq.Workplane(custom_plane_{vi_key})
 
         # 解析Profile(外廓)
         profile_vertices, profile_edges = parse_polygon(vi_data["Profile"], "X")    #返回顶点和边
-        script += f"base_{vi_key} = base_{vi_key}.moveTo({profile_vertices[0][0]}, {profile_vertices[0][1]})\n"         #添加起点
+        vi_chunk += f"base_{vi_key} = base_{vi_key}.moveTo({profile_vertices[0][0]}, {profile_vertices[0][1]})\n"         #添加起点
+        
+        last_point = profile_vertices[0]
+        tol = 1e-6
+        
         
         for i, edge in enumerate(profile_edges):
             end = profile_vertices[(i+1) % len(profile_vertices)]
             
             if edge["type"] == "line" :
-                script += f"base_{vi_key} = base_{vi_key}.lineTo({end[0]}, {end[1]})\n"
+                dist = np.linalg.norm(np.array(end) - np.array(last_point))
+                if dist < tol:
+                    vi_chunk += f"# 跳过零长度 lineTo({end[0]}, {end[1]})\n"
+                    continue
+                vi_chunk += f"base_{vi_key} = base_{vi_key}.lineTo({end[0]}, {end[1]})\n"
+                last_point = end
             
             elif edge["type"] == "circular_arc" :
                 mid = calculate_arc_midpoint(profile_vertices[i], end, edge["angle"])         #计算圆弧边的中点
-                script += f"base_{vi_key} = base_{vi_key}.threePointArc(({mid[0]}, {mid[1]}), ({end[0]}, {end[1]}))\n"
+                vi_chunk += f"base_{vi_key} = base_{vi_key}.threePointArc(({mid[0]}, {mid[1]}), ({end[0]}, {end[1]}))\n"
+                last_point = end
                 
             elif edge["type"] == "elliptical_arc" :
-                script += generate_sketch_elliptical_arc(f"base_{vi_key}", edge)
+                vi_chunk += generate_sketch_elliptical_arc(f"base_{vi_key}", edge)
+                last_point = end
            
-        script += f"base_{vi_key}.close()\n\n"     
+        vi_chunk += f"base_{vi_key}.close()\n\n"     
     
-    
-        # 解析Path
-        path_vertices, path_edges,path_normals = parse_polygon(vi_data["Path"], "P")             #返回路径点和路径边及法向量
-        
+         
         # 添加Path路径                                                                          
-        script += f"# 扫掠路径\n"
-        script += f"points_{vi_key} = [\n"
+        vi_chunk += f"# 扫掠路径（已过滤近重合点；总长≈{total_len:.6g}）\n"
+        vi_chunk += f"points_{vi_key} = [\n"
         
         for i , vertex in enumerate(path_vertices):
-            script += f"        ({vertex[0]}, {vertex[1]}, {vertex[2]}){','if i < len(path_vertices)-1 else ''}\n"
-        script += f"]\n"
+            vi_chunk += f"        ({vertex[0]}, {vertex[1]}, {vertex[2]}){','if i < len(filtered_path)-1 else ''}\n"
+        vi_chunk += f"]\n"
         
-        script += f"""
+        vi_chunk += f"""
 #构建扫掠路径
 path_wire_{vi_key} = build_path(points_{vi_key}, custom_plane_{vi_key})
 """
 
-        script += f"""#执行扫掠
+        vi_chunk += f"""#执行扫掠
 swept_{vi_key} = base_{vi_key}.sweep(path_wire_{vi_key}, isFrenet = False, makeSolid = True, normal = cq.Vector(*z_dir_{vi_key}))
 """
 
         if is_solid == "True":
-            script += f"solids.append(swept_{vi_key})\n\n"
+            vi_chunk += f"solids.append(swept_{vi_key})\n\n"
         else:
-            script += f"cuts.append(swept_{vi_key})\n\n"
+            vi_chunk += f"cuts.append(swept_{vi_key})\n\n"
+            
+        script += vi_chunk
             
     script +="""
 #组合所有几何体
@@ -268,7 +318,7 @@ for cut in cuts:
 
 """
     #错误处理说是
-    script += """
+    script += f"""
 # 最终模型检查
 if final_model is None:
     if solids:
@@ -280,8 +330,7 @@ if final_model is None:
         raise RuntimeError("未生成任何几何体")
 
 # 导出结果
-cq.exporters.export(final_model, './test/test819.stl', exportType='STL')
-print("模型已导出为test818.stl")
+cq.exporters.export(final_model, '/data/aihao/DATA/0827/2/STL/{shangpin_ID}.stl', exportType='STL')
 """
 
 
@@ -289,13 +338,51 @@ print("模型已导出为test818.stl")
     # 保存脚本
     with open(output_file, 'w') as f:
         f.write(script)
-    print(f"Generated CadQuery script saved to {output_file}")
+    #print(f"Generated CadQuery script saved to {output_file}")
 
 
 # 示例数据
-sample_data = {"V0":{"R":[1.5707964,-0.0,0.0,1],"T":[500.0,0.0,0.0],"is_solid":"True","Profile":{"X0":[-300.0,50.000000000000036],"0E1":{"type":"circular_arc","angle":-1.5707963267948952},"X1":[-100.00000000000006,250.0],"1E2":{"type":"line"},"X2":[299.9999999999999,250.00000000000009],"2E3":{"type":"circular_arc","angle":-1.047197551196598},"X3":[300.0,-250.0],"3E4":{"type":"line"},"X4":[-300.0,-250.0],"4E0":{"type":"line"}},"Path":{"P0":[0,0,0],"0E1":0,"0N1":[0,0,0],"P1":[0,0,18.0]}},"V1":{"R":[1.5707964,-0.0,0.0,1],"T":[500.0,0.0,0.0],"is_solid":"False","Profile":{"X0":[0.0,0.0],"0E1":{"type":"line"},"X1":[-1.273756467240565E-14,50.0],"1E2":{"type":"circular_arc","angle":-4.71238898038469},"X2":[50.0,100.0],"2E3":{"type":"line"},"X3":[100.0,100.0],"3E4":{"type":"line"},"X4":[100.0,49.999999999999986],"4E5":{"type":"circular_arc","angle":-1.5707963267948957},"X5":[50.000000000000014,0.0],"5E0":{"type":"line"}},"Path":{"P0":[0,0,0],"0E1":0,"0N1":[0,0,0],"P1":[0,0,18.0]}},"V2":{"R":[0.0,-0.0,0.7853982,1],"T":[0.0,0.0,400.0],"is_solid":"True","Profile":{"X0":[-300.0,200.0],"0E1":{"type":"line"},"X1":[-250.0,250.0],"1E2":{"type":"line"},"X2":[250.0,250.0],"2E3":{"type":"circular_arc","angle":-1.5707963267948966},"X3":[300.0,200.0],"3E4":{"type":"line"},"X4":[300.0,-200.0],"4E5":{"type":"circular_arc","angle":-4.3906384259880475},"X5":[252.5658350974743,-265.8113883008419],"5E6":{"type":"line"},"X6":[83.20502943378435,-322.2649901887385],"6E7":{"type":"elliptical_arc","major_radius":100.0,"minor_radius":50.0,"origin":[0.0,-350.0],"start_angle":-0.5880026035475678,"end_angle":2.214297435588181,"dx":[1.0,0.0],"clocksign":-1},"X7":[-60.000000000000014,-390.0],"7E8":{"type":"line"},"X8":[-150.00000000000003,-450.0],"8E9":{"type":"circular_arc","angle":-0.5939260134047075},"X9":[-425.0,-350.0],"9E10":{"type":"line"},"X10":[-300.0,-250.0],"10E0":{"type":"line"}},"Path":{"P0":[0,0,0],"0E1":0,"0N1":[0,0,0],"P1":[0,0,18.0]}},"V3":{"R":[0.0,-0.0,0.0,1],"T":[-800.0,0.0,0.0],"is_solid":"True","Profile":{"X0":[-300.0,50.000000000000036],"0E1":{"type":"circular_arc","angle":-1.5707963267948952},"X1":[-100.00000000000006,250.0],"1E2":{"type":"line"},"X2":[300.0,250.0],"2E3":{"type":"line"},"X3":[300.0,-250.0],"3E4":{"type":"line"},"X4":[-300.0,-250.0],"4E0":{"type":"line"}},"Path":{"P0":[0,0,0],"0E1":0,"0N1":[0,0,0],"P1":[0,0,18.0]}},"V4":{"R":[0.0,-0.0,0.0,1],"T":[-800.0,0.0,0.0],"is_solid":"False","Profile":{"X0":[0.0,0.0],"0E1":{"type":"line"},"X1":[0.0,50.0],"1E2":{"type":"circular_arc","angle":-1.5707963267948952},"X2":[49.999999999999986,100.0],"2E3":{"type":"line"},"X3":[100.0,100.0],"3E4":{"type":"line"},"X4":[100.00000000000001,0.0],"4E0":{"type":"circular_arc","angle":-1.047197551196598}},"Path":{"P0":[0,0,16.0],"0E1":0,"0N1":[0,0,0],"P1":[0,0,18.0]}}}
+sample_data = {"V0":{"R":[0.0,-0.0,0.0,1],"T":[0.0,0.0,0.0],"is_solid":"True","Profile":{"X0":[-300.0,200.0],"0E1":{"type":"line"},"X1":[-250.0,250.0],"1E2":{"type":"line"},"X2":[250.0,250.0],"2E3":{"type":"circular_arc","angle":-1.5707963267948966},"X3":[300.0,200.0],"3E4":{"type":"line"},"X4":[300.0,-200.0],"4E5":{"type":"circular_arc","angle":-4.3906384259880475},"X5":[252.5658350974743,-265.8113883008419],"5E6":{"type":"line"},"X6":[83.20502943378435,-322.2649901887385],"6E7":
+    {"type":"elliptical_arc",
+     "major_radius":100.0,
+     "minor_radius":50.0,
+     "origin":[0.0,-350.0],
+     "start_angle":-0.5880026035475678,
+     "end_angle":2.214297435588181,
+     "dx":[1.0,0.0]},
+    "X7":[-60.000000000000014,-390.0],"7E8":{"type":"line"},"X8":[-150.00000000000003,-450.0],"8E9":{"type":"circular_arc","angle":-0.5939260134047075},"X9":[-425.0,-350.0],"9E10":{"type":"line"},"X10":[-300.0,-250.0],"10E0":{"type":"line"}},"Path":{"P0":[0,0,0],"0E1":0,"0N1":[0,0,0],"P1":[0,0,18.0]}}}
 
 
 
-output_file = "/home/aihao/Generate_CadQuery/Gen_CADquery/test/822/muti-Vi.py"
-generate_cadquery_script(sample_data, output_file)
+def process_json_files(input_folder , output_folder):
+    os.makedirs(output_folder, exist_ok=True)
+    
+    all_files = [ f for f in os.listdir(input_folder) if os.path.isfile(os.path.join(input_folder, f))]
+    
+    for filename in all_files:
+        file_path = os.path.join(input_folder, filename)
+        
+        try:
+            with open(file_path, 'r') as f:
+                data = json.load(f)
+            
+            shangpin_ID = os.path.splitext(filename)[0]
+            output_path = os.path.join(output_folder, f"{shangpin_ID}.py")
+            
+            generate_cadquery_script(data, output_path, shangpin_ID)
+            
+            print(f"已处理： {filename} -> {output_path}")
+        
+        except json.JSONDecodeError:
+            print(f"跳过文件 {filename}: 不是有效的JSON格式")
+        except Exception as e:
+            print(f"处理文件 {filename} 时出错： {str(e)}")
+
+
+
+if __name__ == "__main__":
+    
+    input_folder = "/data/aihao/DATA/0827/2/JSON"
+    output_folder = "/data/aihao/DATA/0827/2/CADQuery"
+    
+    process_json_files(input_folder , output_folder)
