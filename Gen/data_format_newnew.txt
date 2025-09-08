@@ -3,13 +3,14 @@ Profile:
 {
     "X0": [0, 0],  # 顶点坐标不变
     "0E1": {       # 边定义改为字典
-        "type": "line",          # 直线
+        "type": "line",           # 直线
     },
 
     "X1": [100, 0], 
     "1E2": {
-        "type": "circular_arc",  # 圆弧
-        "angle": 1.57,           # 弧度制角度（正=逆时针）
+        "type": "circular_arc",   # 圆弧
+        "origin": [x, y],         #圆心坐标
+        "angle": 1.57,            # 弧度制角度（正=逆时针）
         "origin": [x, y],         # 圆心坐标
     },
 

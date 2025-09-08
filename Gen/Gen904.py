@@ -97,10 +97,15 @@ def generate_sketch_elliptical_arc(wp_var, edge_params):
     2.start和end角度互换
     3.顺逆时针保持不变
     """
-    
-    return f"""
+    if sense == 1 :
+        return f"""
 #椭圆弧
 {wp_var} = {wp_var}.ellipseArc({major}, {minor}, rotation_angle = {rotation_deg}, angle1 = {start_angle}, angle2 = {end_angle}, startAtCurrent = True, sense = {sense})
+"""
+    elif sense == -1 :
+        return f"""
+#椭圆弧
+{wp_var} = {wp_var}.ellipseArc({major}, {minor}, rotation_angle = {rotation_deg}, angle1 = {-end_angle}, angle2 = {-start_angle}, startAtCurrent = True, sense = {sense})
 """
 
 
@@ -330,7 +335,7 @@ if final_model is None:
         raise RuntimeError("未生成任何几何体")
 
 # 导出结果
-cq.exporters.export(final_model, '/data/aihao/DATA/0829/2/STL/{shangpin_ID}.stl', exportType='STL')
+cq.exporters.export(final_model, '/data/aihao/DATA/0905/4/STL/{shangpin_ID}.stl', exportType='STL')
 """
 
 
@@ -339,19 +344,6 @@ cq.exporters.export(final_model, '/data/aihao/DATA/0829/2/STL/{shangpin_ID}.stl'
     with open(output_file, 'w') as f:
         f.write(script)
     #print(f"Generated CadQuery script saved to {output_file}")
-
-
-# 示例数据
-sample_data = {"V0":{"R":[0.0,-0.0,0.0,1],"T":[0.0,0.0,0.0],"is_solid":"True","Profile":{"X0":[-300.0,200.0],"0E1":{"type":"line"},"X1":[-250.0,250.0],"1E2":{"type":"line"},"X2":[250.0,250.0],"2E3":{"type":"circular_arc","angle":-1.5707963267948966},"X3":[300.0,200.0],"3E4":{"type":"line"},"X4":[300.0,-200.0],"4E5":{"type":"circular_arc","angle":-4.3906384259880475},"X5":[252.5658350974743,-265.8113883008419],"5E6":{"type":"line"},"X6":[83.20502943378435,-322.2649901887385],"6E7":
-    {"type":"elliptical_arc",
-     "major_radius":100.0,
-     "minor_radius":50.0,
-     "origin":[0.0,-350.0],
-     "start_angle":-0.5880026035475678,
-     "end_angle":2.214297435588181,
-     "dx":[1.0,0.0]},
-    "X7":[-60.000000000000014,-390.0],"7E8":{"type":"line"},"X8":[-150.00000000000003,-450.0],"8E9":{"type":"circular_arc","angle":-0.5939260134047075},"X9":[-425.0,-350.0],"9E10":{"type":"line"},"X10":[-300.0,-250.0],"10E0":{"type":"line"}},"Path":{"P0":[0,0,0],"0E1":0,"0N1":[0,0,0],"P1":[0,0,18.0]}}}
-
 
 
 def process_json_files(input_folder , output_folder):
@@ -382,7 +374,7 @@ def process_json_files(input_folder , output_folder):
 
 if __name__ == "__main__":
     
-    input_folder = "/data/aihao/DATA/0829/2/JSON"
-    output_folder = "/data/aihao/DATA/0829/2/CADQuery"
+    input_folder = "/data/aihao/DATA/0905/4/JSON"
+    output_folder = "/data/aihao/DATA/0905/4/CADQuery"
     
     process_json_files(input_folder , output_folder)

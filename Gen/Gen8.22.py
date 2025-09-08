@@ -282,7 +282,7 @@ if final_model is None:
         raise RuntimeError("未生成任何几何体")
 
 # 导出结果
-cq.exporters.export(final_model, '/data/aihao/DATA/0829/1/STL/{shangpin_ID}.stl', exportType='STL')
+cq.exporters.export(final_model, '/data/aihao/DATA/0829/2/STL/{shangpin_ID}.stl', exportType='STL')
 """
 
 
@@ -334,7 +334,7 @@ def process_json_files(input_folder , output_folder):
 
 if __name__ == "__main__":
     
-    input_folder = "/data/aihao/DATA/0829/1/JSON"
-    output_folder = "/data/aihao/DATA/0829/1/CADQuery"
+    input_folder = "/data/aihao/DATA/0829/2/JSON"
+    output_folder = "/data/aihao/DATA/0829/2/CADQuery"
     
     process_json_files(input_folder , output_folder)
