@@ -7,69 +7,41 @@ import os
 
 
 """通用2D/3D圆弧中点计算（自动处理共面性）"""
-def calculate_arc_midpoint(start, end, angle_rad, normal = None):
+def calculate_arc_midpoint(start, end, angle_rad, center , normal = None):
+    """
+    根据起点、终点、圆心和弧度角，计算圆弧上的中点
+    start, end, center: list/tuple/np.array
+    angle_rad: 弧度，正为逆时针，负为顺时针
+    normal: 3D情况下的法向量（仅3D用）
+    """
     
     start = np.array(start)
     end = np.array(end)
+    center = np.array(center)
     dim = len(start)  # 2D或3D
     
     # 处理直线边
     if angle_rad == 0:
         return ((start + end) / 2).tolist()
-    
-    # 计算圆心和半径
-    chord = end - start                                 #弦
-    length = np.linalg.norm(chord)                      #弦长
-    #angle_rad = np.radians(abs(angle_deg))             angle_deg>0为逆时针圆弧，<0为顺时针圆弧
-    abs_angel = abs(angle_rad)
-    radius = length / (2 * np.sin(abs(angle_rad) / 2))       #半径长度,直接使用弧度
-    
+
     #2D情况下
     if dim == 2:
-        # 计算法向量方向（由angle_deg决定）
-        normal_dir = np.array([-chord[1], chord[0]])    #基础逆时针法向量
-        
-        if angle_rad < 0:                               #顺逆时针判断
-            normal_dir = -normal_dir                    
-        if abs_angel > np.pi:                           #优弧判断
-            normal_dir = -normal_dir
-
-        normal_dir = normal_dir / np.linalg.norm(normal_dir)  # 单位化
-        
-        # 计算圆心
-        mid_point = (start + end) / 2
-        center = mid_point + np.sqrt(radius**2 - (length/2)**2) * normal_dir
-        
-        # 计算中点（旋转一半角度）
+        # 将起点向量旋转 angle/2 得到中点
         vec_start = start - center
         theta = angle_rad / 2
         rot_matrix = np.array([
-            [ np.cos(theta), -np.sin(theta)],
-            [ np.sin(theta),  np.cos(theta)]
+            [ np.cos(theta) , -np.sin(theta)],
+            [ np.sin(theta) ,  np.cos(theta)]
         ])
         arc_mid = center + rot_matrix @ vec_start
-        
+
     #3D情况
     else:
         # 验证/生成法向量
         if normal is None:
             raise ValueError("需要提供法向量")
-        
-        normal = np.array(normal)
-        if np.allclose(normal, [0, 0, 0]):
-            raise ValueError("法向量不能为零向量")
-        
-        if not np.isclose(np.dot(normal, chord), 0, atol=1e-6):
-            raise ValueError("法向量必须垂直于弦")
-        
-        normal = normal / np.linalg.norm(normal)
+        normal = np.array(normal) / np.linalg.norm(normal)
 
-        # 计算圆心（方向由angle_deg决定）
-        mid_point = (start + end) / 2
-        sign = 1 if angle_rad > 0 else -1
-        center = mid_point + sign * np.sqrt(radius**2 - (length/2)**2) * normal
-        print(f"{center}")
-        
         # 计算中点
         vec_start = start - center
         rotation = R.from_rotvec(angle_rad/2 * normal)
@@ -221,11 +193,18 @@ cuts = []
         vi_chunk = ""
         
         #解析旋转和平移参数
-        rotation_quat = vi_data.get("R" , [0, 0, 0, 1])
-        translation = vi_data.get("T" , [0,0,0])
-        is_solid = vi_data.get("is_solid",True)
         
-        rot = R.from_quat(rotation_quat)
+        M = np.array(vi_data["M"])
+        R_mat = M[:3, :3]   #旋转
+        T_vec = M[:3, 3]
+        rot = R.from_matrix(R_mat)
+        translation = T_vec
+        
+        #rotation_quat = vi_data.get("R" , [0, 0, 0, 1])
+        #translation = vi_data.get("T" , [0,0,0])
+        #rot = R.from_quat(rotation_quat)   
+             
+        is_solid = vi_data.get("is_solid",True)
         
         x_dir = rot.apply([1, 0, 0])
         y_dir = rot.apply([0, 1, 0])
@@ -268,8 +247,19 @@ base_{vi_key} = cq.Workplane(custom_plane_{vi_key})
                 last_point = end
             
             elif edge["type"] == "circular_arc" :
-                mid = calculate_arc_midpoint(profile_vertices[i], end, edge["angle"])         #计算圆弧边的中点
-                vi_chunk += f"base_{vi_key} = base_{vi_key}.threePointArc(({mid[0]}, {mid[1]}), ({end[0]}, {end[1]}))\n"
+                start = profile_vertices[i]
+                center = edge["origin"]
+                angle = edge.get("angle", None)
+                
+                if np.allclose(start , end , atol=tol) and angle is not None and abs(abs(angle) - 2*np.pi) < 1e-3 :
+                    #整圆
+                    radius = np.linalg.norm(np.array(start) - np.array(center))
+                    vi_chunk += f"base_{vi_key} = base_{vi_key}.center({center[0]}, {center[1]}).circle({radius})\n"
+                    
+                else:       #圆弧
+                    mid = calculate_arc_midpoint(start , end , angle , center)
+                    vi_chunk += f"base_{vi_key} = base_{vi_key}.threePointArc(({mid[0]}, {mid[1]}), ({end[0]}, {end[1]}))\n"
+                
                 last_point = end
                 
             elif edge["type"] == "elliptical_arc" :
