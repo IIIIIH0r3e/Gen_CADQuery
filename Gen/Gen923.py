@@ -214,15 +214,6 @@ cuts = []
         T_vec = M[:3, 3]
         
         rot = R.from_matrix(R_mat)
-        """      
-        # 先计算旋转后的Z方向
-        z_dir = R_mat @ np.array([0,0,1])
-
-        # 如果方向反了，就翻转R_mat
-        if np.dot(z_dir, [0,0,1]) < 0:
-            R_mat = R_mat @ np.diag([1,1,-1])
-            z_dir = -z_dir   # 同步更新方向
-        """
         translation = T_vec + R_mat @ path_start
         is_solid = vi_data.get("is_solid",True)
         
@@ -346,7 +337,7 @@ if final_model is None:
         raise RuntimeError("未生成任何几何体")
 
 # 导出结果
-cq.exporters.export(final_model, '/data/aihao/DATA/0923/test/STL/{shangpin_ID}.stl', exportType='STL')
+cq.exporters.export(final_model, '/data/aihao/DATA/0919/test2/STL/{shangpin_ID}.stl', exportType='STL')
 """
 
 
@@ -385,7 +376,7 @@ def process_json_files(input_folder , output_folder):
 
 if __name__ == "__main__":
     
-    input_folder = "/data/aihao/DATA/0923/test/JSON"
-    output_folder = "/data/aihao/DATA/0923/test/CADQuery"
+    input_folder = "/data/aihao/DATA/0919/test2/JSON"
+    output_folder = "/data/aihao/DATA/0919/test2/CADQuery"
     
     process_json_files(input_folder , output_folder)
