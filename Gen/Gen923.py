@@ -175,7 +175,7 @@ def path_is_valid(path_points, tol=1e-6, edges = None):
 
 
 """生成完整CadQuery脚本"""
-def generate_cadquery_script(vi_dict, output_file, shangpin_ID):
+def generate_cadquery_script(vi_dict, output_file, shangpin_ID, output_STL_folder):
     
     #脚本头部
     script = f"""# Auto-generated CadQuery script
@@ -337,7 +337,7 @@ if final_model is None:
         raise RuntimeError("未生成任何几何体")
 
 # 导出结果
-cq.exporters.export(final_model, '/data/aihao/DATA/0919/test2/STL/{shangpin_ID}.stl', exportType='STL')
+cq.exporters.export(final_model, '{output_STL_folder}/{shangpin_ID}.stl', exportType='STL')
 """
 
 
@@ -348,22 +348,22 @@ cq.exporters.export(final_model, '/data/aihao/DATA/0919/test2/STL/{shangpin_ID}.
     #print(f"Generated CadQuery script saved to {output_file}")
 
 
-def process_json_files(input_folder , output_folder):
-    os.makedirs(output_folder, exist_ok=True)
+def process_json_files(input_JSON_folder , output_CADQuery_folder, output_STL_folder):
+    os.makedirs(output_CADQuery_folder, exist_ok=True)
     
-    all_files = [ f for f in os.listdir(input_folder) if os.path.isfile(os.path.join(input_folder, f))]
+    all_files = [ f for f in os.listdir(input_JSON_folder) if os.path.isfile(os.path.join(input_JSON_folder, f))]
     
     for filename in all_files:
-        file_path = os.path.join(input_folder, filename)
+        file_path = os.path.join(input_JSON_folder, filename)
         
         try:
             with open(file_path, 'r') as f:
                 data = json.load(f)
             
             shangpin_ID = os.path.splitext(filename)[0]
-            output_path = os.path.join(output_folder, f"{shangpin_ID}.py")
+            output_path = os.path.join(output_CADQuery_folder, f"{shangpin_ID}.py")
             
-            generate_cadquery_script(data, output_path, shangpin_ID)
+            generate_cadquery_script(data, output_path, shangpin_ID, output_STL_folder)
             
             print(f"已处理： {filename} -> {output_path}")
         
@@ -376,7 +376,9 @@ def process_json_files(input_folder , output_folder):
 
 if __name__ == "__main__":
     
-    input_folder = "/data/aihao/DATA/0919/test2/JSON"
-    output_folder = "/data/aihao/DATA/0919/test2/CADQuery"
+    input_JSON_folder = "/data/aihao/DATA/0925/test/JSON"
+    output_CADQuery_folder = "/data/aihao/DATA/0925/test/CADQuery"
+    output_STL_folder = "/data/aihao/DATA/0925/test/STL"
     
-    process_json_files(input_folder , output_folder)
+    
+    process_json_files(input_JSON_folder , output_CADQuery_folder,output_STL_folder)
