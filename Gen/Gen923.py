@@ -376,9 +376,9 @@ def process_json_files(input_JSON_folder , output_CADQuery_folder, output_STL_fo
 
 if __name__ == "__main__":
     
-    input_JSON_folder = "/data/aihao/DATA/0925/test/JSON"
-    output_CADQuery_folder = "/data/aihao/DATA/0925/test/CADQuery"
-    output_STL_folder = "/data/aihao/DATA/0925/test/STL"
+    input_JSON_folder = "/data/aihao/DATA/model_0925/JSON"
+    output_CADQuery_folder = "/data/aihao/DATA/model_0925/CADQuery"
+    output_STL_folder = "/data/aihao/DATA/model_0925/STL"
     
     
     process_json_files(input_JSON_folder , output_CADQuery_folder,output_STL_folder)
